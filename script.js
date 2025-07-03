@@ -1,31 +1,53 @@
-const map = L.map('map').setView([0, 0], 2); // Vista mundial
+// Tu token de IUCN
+const API_KEY = "QzRYbziNhTR4j3ZntAYbcFz6DiSN5B3BQRDC";
+
+// Inicializar el mapa
+const map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap',
-  maxZoom: 18
+  maxZoom: 18,
 }).addTo(map);
 
-// Ejemplo de especies en peligro
+// Lista de especies a mostrar (puedes ampliar esto)
 const especies = [
   {
-    nombre: "Jaguar",
-    coords: [-3.4653, -62.2159],
-    estado: "En peligro",
-    imagen: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Jaguar.jpg"
+    nombreCientifico: "Panthera onca",
+    nombreComun: "Jaguar",
+    coordenadas: [-3.4, -62.2],
   },
   {
-    nombre: "Vaquita marina",
-    coords: [30.8, -114.7],
-    estado: "Críticamente en peligro",
-    imagen: "https://upload.wikimedia.org/wikipedia/commons/5/53/Vaquita.jpg"
-  }
+    nombreCientifico: "Phocoena sinus",
+    nombreComun: "Vaquita marina",
+    coordenadas: [30.8, -114.7],
+  },
 ];
 
-especies.forEach(e => {
-  L.marker(e.coords).addTo(map)
-    .bindPopup(`
-      <strong>${e.nombre}</strong><br>
-      Estado: ${e.estado}<br>
-      <img src="${e.imagen}" width="150">
-    `);
+// Consultar y mostrar cada especie
+especies.forEach(async (especie) => {
+  const url = `https://apiv3.iucnredlist.org/api/v3/species/${encodeURIComponent(especie.nombreCientifico)}?token=${API_KEY}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const info = data.result[0];
+
+    const popupHTML = `
+      <strong>${especie.nombreComun}</strong><br>
+      Nombre científico: ${especie.nombreCientifico}<br>
+      Estado: <b>${info.category}</b><br>
+      Clase: ${info.class_name}
+    `;
+
+    // Crear marcador en el mapa
+    L.circleMarker(especie.coordenadas, {
+      radius: 8,
+      color: info.category === "CR" ? "red" :
+             info.category === "EN" ? "orange" : "yellow",
+      fillOpacity: 0.7,
+    }).addTo(map).bindPopup(popupHTML);
+
+  } catch (err) {
+    console.error("Error al obtener datos de:", especie.nombreCientifico, err);
+  }
 });
